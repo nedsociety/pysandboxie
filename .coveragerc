@@ -1,0 +1,7 @@
+[report]
+exclude_lines = coverage: no cover
+
+[run]
+omit =
+    sandboxie/sandbox_stub_redirector.py
+    sandboxie/tests/*
