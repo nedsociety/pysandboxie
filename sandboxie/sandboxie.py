@@ -227,8 +227,10 @@ class Sandboxie:
         '''
         cfg = self._readini()
 
-        if (not exist_ok) and (name in cfg):
-            raise FileExistsError(f'sandbox "{name}" already exists')
+        if name in cfg:
+            if not exist_ok:
+                raise FileExistsError(f'sandbox "{name}" already exists')
+            return
 
         cfg[name] = settings or []
 
@@ -298,6 +300,8 @@ class Sandboxie:
 
         if name not in cfg:
             raise FileNotFoundError(f'sandbox "{name}" not found')
+
+        self.terminate_sandbox_processes(name=name)
 
         subprocess.run([self._startpath, f'/box:{name}', 'delete_sandbox_silent'], check=True)
 
