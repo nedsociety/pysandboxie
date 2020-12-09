@@ -319,9 +319,8 @@ class Sandboxie:
         if name not in cfg:
             raise FileNotFoundError(f'sandbox "{name}" not found')
 
-        if preserve_content:
-            self.terminate_sandbox_processes(name)
-        else:
+        self.terminate_sandbox_processes(name)
+        if not preserve_content:
             self.delete_content(name)
 
         del cfg[name]
