@@ -160,6 +160,10 @@ class Sandboxie:
         currentsection = None
 
         with self._inipath.open('r', encoding='utf-16-le') as f:
+            # In case someone saved it with BOM
+            if f.read(1) != '\ufeff':
+                f.seek(0)
+
             for line in f:
                 line = line.strip('\r\n')
                 if not line:
