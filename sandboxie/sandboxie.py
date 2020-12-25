@@ -10,33 +10,8 @@ from pathlib import Path
 from . import win32namedpipe
 
 
-__all__ = ('enable_subprocess_debugging', 'SandboxiePipedProcess', 'Sandboxie')
+__all__ = ('SandboxiePipedProcess', 'Sandboxie')
 
-_SUBPROCESS_DEBUGGING = False
-
-
-def enable_subprocess_debugging(enable: bool): # coverage: no cover
-    '''
-    Enables or disables debugpy debugging under sandboxed subprocess. Enabling this feature requires current process
-    under debugging by debugpy. Otherwise this function will raise NotImplementedError.
-
-    Note: Calling this function with `enable=True` **breaks** coverage.py, even if the process is not under debugging.
-          Do not use this function inside tests.
-
-    :param enable: Whether to enable subprocess debugging.
-    :type enable: bool
-    '''
-    global _SUBPROCESS_DEBUGGING
-
-    if enable:
-        try:
-            import debugpy
-            if not debugpy.is_client_connected():
-                raise RuntimeError
-        except Exception as e:
-            raise NotImplementedError('debugging subprocesses requires debugpy running on current process') from e
-
-    _SUBPROCESS_DEBUGGING = enable
 
 
 class SandboxiePipedProcess:
@@ -95,6 +70,8 @@ class Sandboxie:
     '''
     Represents the Sandboxie application.
     '''
+    _PIPE_PREFIX = r'\\.\pipe\pysandboxie_pipe'
+
     SETTING_TEMPLATES = {
         'default': list(filter(None, textwrap.dedent(
             # Note: These default settings are not complete -- in most cases the SbieCtrl.exe will pop-up a new list of
@@ -110,9 +87,9 @@ class Sandboxie:
             BorderColor=#00FFFF,ttl
             '''
         ).split('\n'))),
-        'piped_execution': [rf'OpenPipePath=\Device\NamedPipe\pysandboxie_pipe*']
+        'piped_execution': [rf'OpenPipePath={win32namedpipe.pipepath_unc_to_nt_namespace(_PIPE_PREFIX)}*']
     }
-    _PIPE_PREFIX = r'\\.\pipe\pysandboxie_pipe'
+    
     DEFAULTBOX = 'DefaultBox'
 
     def _locate_start(self):  # coverage: no cover
@@ -194,10 +171,32 @@ class Sandboxie:
     def __init__(self):
         self._locate_start()
         self._locate_ini()
+        self._subprocess_debugging = False
 
-    def make_sandbox_setting(
-        self, templates: str = 'default,piped_execution', settings: typing.Optional[list[str]] = None
-    ):
+    def enable_subprocess_debugging(self, enable: bool): # coverage: no cover
+        '''
+        Enables or disables debugpy debugging under sandboxed subprocesses. Enabling this feature requires current
+        process under debugging by debugpy. Otherwise this function will raise NotImplementedError.
+
+        Note: Calling this function with `enable=True` **breaks** coverage.py, even if the process is not under
+              debugging. Do not use this function when running coverage.py.
+
+        :param enable: Whether to enable subprocess debugging.
+        :type enable: bool
+        '''
+
+        if enable:
+            try:
+                import debugpy
+                if not debugpy.is_client_connected():
+                    raise RuntimeError
+            except Exception as e:
+                raise NotImplementedError('debugging subprocesses requires debugpy running on current process') from e
+
+        self._subprocess_debugging = enable
+
+
+    def make_sandbox_setting(self, templates: str = 'default', settings: typing.Optional[list[str]] = None):
         '''
         A utility function to create settings for a sandbox.
 
@@ -369,7 +368,7 @@ class Sandboxie:
         if hide_window:
             invocation_sandboxie.append('/hide_window')
 
-        if _SUBPROCESS_DEBUGGING: # coverage: no cover
+        if self._subprocess_debugging: # coverage: no cover
             # Here we simulate how debugpy (pydevd, to be exact) tries to hook subprocess for debugging.
             # REF: https://github.com/microsoft/debugpy/blob/2341614e1451fb0482c6ca5288d77d730b259cea/src/debugpy/_vendored/pydevd/_pydev_bundle/pydev_monkey.py#L707
 

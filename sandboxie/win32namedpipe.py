@@ -9,6 +9,7 @@ import os
 import io
 import time
 import functools
+import re
 
 # This pipe implementation works only for the most basic cases:
 # - Blocking only
@@ -16,6 +17,7 @@ import functools
 # - No security features
 # - Byte stream only
 # - Unlimited instance
+# - Local only
 
 
 def _translate_exception(target):
@@ -81,8 +83,9 @@ def _wrap_win32_handle_to_file(pyhandle, open_osfhandle_flags, fdopen_mode, buff
         os.close(fd)
         raise
 
-
-_TEMPPIPECOUNT = 0
+__all__ = (
+    'Win32NamedPipeServer', 'Win32NamedPipeClient', 'temppipeserver', 'pipepath_unc_to_nt_namespace'
+)
 
 
 class Win32NamedPipeServer:
@@ -252,8 +255,25 @@ class Win32NamedPipeClient:
 
         return _wrap_win32_handle_to_file(handle, self._open_osfhandle_flags, self._fdopen_mode, self._buffering)
 
+_TEMPPIPECOUNT = 0
 
 def temppipeserver(prefix, *args, **kwargs):
     global _TEMPPIPECOUNT
     _TEMPPIPECOUNT += 1
     return Win32NamedPipeServer(f'{prefix}_{time.time_ns()}_{_TEMPPIPECOUNT}', *args, **kwargs)
+
+
+def pipepath_unc_to_nt_namespace(name: str) -> str:
+    r'''
+    Convert a UNC path to a local named pipe (prefixed by `\\.\pipe\`) into NT namespace equivalent (prefixed by
+    `\Device\NamedPipe\`).
+
+    :param name: UNC path to a local named pipe.
+    :type name: str
+    :return: NT namespace path to a local named pipe.
+    :rtype: str
+    '''
+    match = re.fullmatch(r'\\\\.\\pipe\\(.*)', name)
+    if match is None:
+        raise ValueError('name is not a proper UNC path to a local named pipe.')
+    return rf'\Device\NamedPipe\{match[1]}'

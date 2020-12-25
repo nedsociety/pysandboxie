@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pysandboxie"
-version = "0.1.0"
+version = "0.2.0"
 description = "Sandboxie binding for Python"
 authors = ["nedsociety <nedsociety@gmail.com>"]
 license = "MIT"

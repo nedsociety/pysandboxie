@@ -141,3 +141,8 @@ def test_connection_broken_at_start():
 
         with pytest.raises(BrokenPipeError):
             server.wait_for_connection(sf)
+
+def test_pipepath_unc_to_nt_namespace():
+    assert w32np.pipepath_unc_to_nt_namespace(r'\\.\pipe\testname') == r'\Device\NamedPipe\testname'
+    with pytest.raises(ValueError):
+        w32np.pipepath_unc_to_nt_namespace(r'\\.\nonpipe\testname')

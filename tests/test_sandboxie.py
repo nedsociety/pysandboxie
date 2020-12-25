@@ -9,15 +9,17 @@ ENABLE_SUBPROCESS_DEBUGGING = False
 
 @pytest.fixture(scope='module')
 def sbie():
+    ret = sandboxie.Sandboxie()
     try:
-        sandboxie.enable_subprocess_debugging(ENABLE_SUBPROCESS_DEBUGGING)
-    except NotImplementedError: # coverage: no cover
+        ret.enable_subprocess_debugging(ENABLE_SUBPROCESS_DEBUGGING)
+    except NotImplementedError:
         pass
 
-    ret = sandboxie.Sandboxie()
-    ret.create_sandbox(name='testpy', settings=ret.make_sandbox_setting(), exist_ok=True)
-    yield ret
-    ret.remove_sandbox(name='testpy')
+    ret.create_sandbox(name='testpy', settings=ret.make_sandbox_setting('default,piped_execution'), exist_ok=True)
+    try:
+        yield ret
+    finally:
+        ret.remove_sandbox(name='testpy')
 
 def test_cmd(sbie):
     sp = sbie.piped_execute(['cmd'], name='testpy', uac=True, hide_window=False)
@@ -47,7 +49,7 @@ def test_settings(sbie):
     
     finally:
         # Restore to default
-        sbie.set_sandbox_settings('testpy', sbie.make_sandbox_setting())
+        sbie.set_sandbox_settings('testpy', sbie.make_sandbox_setting('default,piped_execution'))
 
 def test_duplicates_and_nonexistents(sbie):
     try:
@@ -62,4 +64,4 @@ def test_duplicates_and_nonexistents(sbie):
             sbie.delete_content('testpy')
     finally:
         # Restore
-        sbie.create_sandbox(name='testpy', settings=sbie.make_sandbox_setting(), exist_ok=True)
+        sbie.create_sandbox(name='testpy', settings=sbie.make_sandbox_setting('default,piped_execution'), exist_ok=True)
