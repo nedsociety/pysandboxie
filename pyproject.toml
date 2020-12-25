@@ -1,6 +1,42 @@
+[tool.poetry]
+name = "pysandboxie"
+version = "0.1.0"
+description = "Sandboxie binding for Python"
+authors = ["nedsociety <nedsociety@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/nedsociety/pysandboxie"
+keywords = ["sandboxie", "sandboxie-plus"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: Microsoft :: Windows",
+]
+packages= [{include = "sandboxie"}]
+include = ["LICENSE"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pywin32 = "^300"
+clize = "^4.1.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.1"
+coverage = {extras = ["toml"], version = "^5.3.1"}
+pytest-cov = "^2.10.1"
+debugpy = "^1.2.1"
+autopep8 = "^1.5.4"
+
 [build-system]
-requires = ["setuptools>=40.8.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-addopts = "--cov=sandboxie  --cov-report=xml:cov.xml"
+addopts = "--cov=sandboxie --cov-report=xml:cov.xml --cov-report=html"
+
+[tool.coverage.run]
+omit = [
+    "sandboxie/sandbox_stub_redirector.py",
+]
+
+[tool.coverage.report]
+exclude_lines = ["coverage: no cover"]
