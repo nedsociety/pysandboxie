@@ -290,6 +290,23 @@ class Sandboxie:
 
         subprocess.run([self._startpath, f'/box:{name}', '/terminate'], check=True)
 
+    def listpids(self, name: str = DEFAULTBOX) -> list[int]:
+        '''
+        Returns process ID of currently running processes in a sandbox.
+
+        If the target sandbox is missing, raises FileNotFoundError.
+
+        :param name: Name of the sandbox.
+        :type name: str, optional
+        '''
+        cfg = self._readini()
+
+        if name not in cfg:
+            raise FileNotFoundError(f'sandbox "{name}" not found')
+
+        output = subprocess.check_output([self._startpath, f'/box:{name}', '/listpids'])
+        return [int(pidstr) for pidstr in output.split()[1:]] # 0th is a length parameter
+
     def delete_content(self, name: str = DEFAULTBOX):
         '''
         Deletes the content of a sandbox.

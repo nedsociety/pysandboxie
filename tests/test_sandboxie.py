@@ -1,11 +1,12 @@
 import sandboxie
 import pytest
 import time
-import os
+import ctypes
 
 # Set this to True when you need to debug the tests.
 # Note that this will break the coverage.py so make sure it stays False on version control.
 ENABLE_SUBPROCESS_DEBUGGING = False
+UAC = ctypes.windll.shell32.IsUserAnAdmin()
 
 @pytest.fixture(scope='module')
 def sbie():
@@ -15,11 +16,13 @@ def sbie():
     except NotImplementedError:
         pass
 
-    ret.create_sandbox(name='testpy', settings=ret.make_sandbox_setting('default,piped_execution'), exist_ok=True)
+    if UAC:
+        ret.create_sandbox(name='testpy', settings=ret.make_sandbox_setting('default,piped_execution'), exist_ok=True)
     try:
         yield ret
     finally:
-        ret.remove_sandbox(name='testpy')
+        if UAC:
+            ret.remove_sandbox(name='testpy')
 
 def test_cmd(sbie):
     sp = sbie.piped_execute(['cmd'], name='testpy', uac=True, hide_window=False)
@@ -39,6 +42,8 @@ def test_broken_pipe(sbie):
     assert sp.returncode == 0
 
 def test_settings(sbie):
+    if not UAC:
+        return
     try:
         setting = sbie.make_sandbox_setting('default', ['abc=def'])
         assert len(setting) > 1
@@ -52,6 +57,8 @@ def test_settings(sbie):
         sbie.set_sandbox_settings('testpy', sbie.make_sandbox_setting('default,piped_execution'))
 
 def test_duplicates_and_nonexistents(sbie):
+    if not UAC:
+        return
     try:
         with pytest.raises(FileExistsError):
             sbie.create_sandbox('testpy', exist_ok=False)
@@ -65,3 +72,18 @@ def test_duplicates_and_nonexistents(sbie):
     finally:
         # Restore
         sbie.create_sandbox(name='testpy', settings=sbie.make_sandbox_setting('default,piped_execution'), exist_ok=True)
+
+def test_listpids(sbie):
+    sp = sbie.piped_execute(['cmd'], name='testpy', hide_window=False)
+    cmdproc_pid = None
+    with sp:
+        import psutil
+        for pid in sbie.listpids(name='testpy'):
+            if psutil.Process(pid=pid).name().lower() == 'cmd.exe':
+                cmdproc_pid = pid
+
+        sp.stdin.write(b'exit\n')
+        sp.stdin.flush()
+        sp.stdin.close()
+    
+    assert cmdproc_pid not in sbie.listpids(name='testpy')
