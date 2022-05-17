@@ -132,7 +132,7 @@ class Sandboxie:
         # - It may have multiple entries with same key
         # - It is newline-sensitive -- SbieCtrl sometimes lose information if the newlines are not properly set.
 
-        ret = {}
+        ret = {None: []}
 
         currentsection = None
 
@@ -151,7 +151,6 @@ class Sandboxie:
                     currentsection = match[1]
                     ret[currentsection] = []
                 else:
-                    assert currentsection is not None
                     ret[currentsection].append(line)
 
         return ret
@@ -160,8 +159,12 @@ class Sandboxie:
         self._require_uac_admin()
 
         with self._inipath.open('w', encoding='utf-16-le', newline='\r\n') as f:
+            # The first entry should have key None
+            assert next(iter(content_dict)) is None
+
             for section, lines in content_dict.items():
-                f.write(f'\n[{section}]\n\n')
+                if section is not None:
+                    f.write(f'\n[{section}]\n\n')
                 for line in lines:
                     f.write(f'{line}\n')
 
